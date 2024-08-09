@@ -5,6 +5,7 @@ function  Get-WarrantyHudu {
         [String]$HuduBaseURL,
         [String]$HuduDeviceAssetLayout,
         [string]$HuduWarrantyField,
+        [string]$HuduWarrantyStartField,
         [boolean]$SyncWithSource,
         [boolean]$Missingonly,
         [boolean]$OverwriteWarranty
@@ -33,6 +34,7 @@ function  Get-WarrantyHudu {
     
     #Process field name into API format
     $HuduProcessedFieldName = ($HuduWarrantyField.ToLower()) -replace " ", "_"
+    $HuduProcessedStartFieldName = ($HuduWarrantyStartField.ToLower()) -replace " ", "_"
 
     #Get Devices
     $ResumeLast = test-path 'Devices.json'
@@ -46,6 +48,7 @@ function  Get-WarrantyHudu {
     $i = 0
     $warrantyObject = foreach ($device in $Devices) {
         $i++
+        if ($device.archived) { continue }
         $RemainingList = set-content 'Devices.json' -force -value ($Devices | select-object -skip $i | convertto-json -depth 5)
         Write-Progress -Activity "Grabbing Warranty information" -status "Processing $($device.primary_serial). Device $i of $($devices.Count)" -percentComplete ($i / $Devices.Count * 100)      
         $WarState = Get-Warrantyinfo -DeviceSerial $device.primary_serial -client $device.company_name
@@ -60,6 +63,7 @@ function  Get-WarrantyHudu {
             $field = $device.fields | where-object { $_.label -eq $HuduWarrantyField }
             $device.fields = @{
                 "$HuduProcessedFieldName" = "$($WarState.enddate)"
+                "$HuduProcessedStartFieldName" = "$($WarState.startdate)"
             }            
             
             switch ($OverwriteWarranty) {

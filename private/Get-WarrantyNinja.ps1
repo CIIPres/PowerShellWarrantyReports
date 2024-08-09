@@ -6,7 +6,8 @@ function  Get-WarrantyNinja {
         [String]$AccessKey,
         [boolean]$SyncWithSource,
         [boolean]$OverwriteWarranty,
-        [string]$NinjaFieldName
+        [string]$NinjaFieldName,
+        [string]$NinjaStartFieldName
     )
     $AuthBody = @{
         'grant_type'    = 'client_credentials'
@@ -42,10 +43,18 @@ function  Get-WarrantyNinja {
         $Null = set-content 'Devices.json' -force -value ($Devices | select-object -skip $i | convertto-json -depth 5)
 
         if ($warstate.EndDate) {
-            $Milliseconds = (New-TimeSpan -Start $date1 -End $warstate.EndDate).TotalMilliseconds
-            $UpdateBody = @{
-                "$NinjaFieldName" = $Milliseconds
-            } | convertto-json
+            $Milliseconds = [long]((New-TimeSpan -Start $date1 -End $warstate.EndDate).TotalMilliseconds)
+            if ($WarState.StartDate) {
+                $StartMilliseconds = [long]((New-TimeSpan -Start $date1 -End $warstate.StartDate).TotalMilliseconds)
+                $UpdateBody = @{
+                    "$NinjaFieldName" = $Milliseconds
+                    "$NinjaStartFieldName" = $StartMilliseconds
+                } | convertto-json
+            } else {
+                $UpdateBody = @{
+                    "$NinjaFieldName" = $Milliseconds
+                } | convertto-json
+            }
             
             if ($SyncWithSource -eq $true) {
                 switch ($OverwriteWarranty) {
@@ -55,7 +64,7 @@ function  Get-WarrantyNinja {
                             $Result = Invoke-WebRequest -uri "$($NinjaURL)/v2/device/$($Device.id)/custom-fields" -Method PATCH -Headers $AuthHeader -body $UpdateBody -contenttype 'application/json'
                         }
                         catch {
-                            Write-Error "Failed to update device: $($Device.systemName) $_"
+                            Write-Error "Failed to update device: $($Device.systemName) Body: $UpdateBody $_"
                         }
                     }
                     $false {
@@ -67,7 +76,7 @@ function  Get-WarrantyNinja {
                                 $Result = Invoke-WebRequest -uri "$($NinjaURL)/v2/device/$($Device.id)/custom-fields" -Method PATCH -Headers $AuthHeader -body $UpdateBody -contenttype 'application/json'
                             }
                             catch {
-                                Write-Error "Failed to update device: $($Device.systemName) $_"
+                                Write-Error "Failed to update device: $($Device.systemName) Body: $UpdateBody $_"
                             }        
                         } 
                     }

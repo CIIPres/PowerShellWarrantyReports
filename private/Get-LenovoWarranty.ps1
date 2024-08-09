@@ -1,5 +1,6 @@
 
 function get-LenovoWarranty([Parameter(Mandatory = $true)]$SourceDevice, $client) {
+    if ($script:ExcludeLenovo -ne $True) {
     $today = Get-Date -Format yyyy-MM-dd
     $APIURL = "https://pcsupport.lenovo.com/us/en/api/v4/mse/getproducts?productId=$SourceDevice"
     $Req = Invoke-RestMethod -Uri $APIURL -Method get
@@ -37,5 +38,8 @@ function get-LenovoWarranty([Parameter(Mandatory = $true)]$SourceDevice, $client
             'Warranty URL' = ""
         }
     }
+}
     return $WarObj
+ 
+ 
 }
